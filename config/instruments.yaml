@@ -1,0 +1,5 @@
+instruments:
+- symbol: NSE:NIFTY25JULFUT
+  display_name: NSE:NIFTY25JULFUT
+  lot_size: 75
+  enabled: true

@@ -1,0 +1,13 @@
+instruments:
+  - symbol: "NSE:NIFTY25OCTFUT"
+    display_name: "NIFTY OCT FUT"
+    lot_size: 75
+    enabled: true
+  - symbol: "NSE:BANKNIFTY25OCTFUT"
+    display_name: "BANKNIFTY OCT FUT"
+    lot_size: 35
+    enabled: true
+  - symbol: "BSE:SENSEX25OCTFUT"
+    display_name: "SENSEX OCT FUT"
+    lot_size: 20
+    enabled: false
