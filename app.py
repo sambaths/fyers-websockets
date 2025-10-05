@@ -517,8 +517,10 @@ async def websocket_client():
 @app.route('/')
 def index():
     """Main route - redirect directly to Fyers login if not authenticated, otherwise to dashboard"""
-    # Bypassing auth for frontend verification
-    return render_template('dashboard.html')
+    if not session.get('logged_in'):
+        return redirect(url_for('broker_login'))
+
+    return redirect(url_for('dashboard'))
 
 # Admin login route removed - using direct Fyers OAuth login
 

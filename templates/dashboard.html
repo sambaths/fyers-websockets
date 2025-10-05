@@ -8,23 +8,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        .bid-row:hover, .ask-row:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
+        .bid-row:hover, .ask-row:hover { background-color: rgba(255, 255, 255, 0.05); }
         .depth-bar {
             position: absolute;
             top: 0;
+            left: 0;
             height: 100%;
-            background-color: rgba(0, 255, 0, 0.1);
+            background-color: rgba(72, 187, 120, 0.1);
             z-index: 1;
             transition: width 0.3s ease-in-out;
         }
-        .ask-depth-bar {
-            background-color: rgba(255, 0, 0, 0.1);
-        }
+        .ask-depth-bar { background-color: rgba(244, 63, 94, 0.1); }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .table td, .table th { position: relative; z-index: 2; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.1); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
     </style>
 </head>
 <body class="bg-base-200 min-h-screen" data-theme="dark">
@@ -49,30 +49,32 @@
         </div>
     </div>
 
-    <template id="instrument-tab-template">
+    <template id="instrument-template">
         <div class="tab-content p-4 bg-base-100 rounded-b-box rounded-tr-box">
-            <!-- Header Section -->
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-                <div class="card bg-base-200 shadow">
+                <!-- Header Info -->
+                <div class="card bg-base-200 shadow-xl">
                     <div class="card-body p-4">
                         <div class="stat-title text-xs">Symbol</div>
-                        <div class="stat-value text-md font-mono symbol-display"></div>
+                        <div class="stat-value text-md font-mono symbol-display">--</div>
                     </div>
                 </div>
-                <div class="card bg-base-200 shadow">
+                <div class="card bg-base-200 shadow-xl">
                     <div class="card-body p-4">
                         <div class="stat-title text-xs">Last Price</div>
                         <div class="stat-value text-md font-mono last-price">--</div>
+                        <div class="stat-desc text-xs price-change">--</div>
                     </div>
                 </div>
-                <div class="card bg-base-200 shadow">
+                <div class="card bg-base-200 shadow-xl">
                     <div class="card-body p-4">
                         <div class="stat-title text-xs">Bid-Ask Spread</div>
                         <div class="stat-value text-md font-mono bid-ask-spread">--</div>
                     </div>
                 </div>
-                <div class="card bg-base-200 shadow">
-                    <div class="card-body p-4 flex-row items-center justify-between">
+                <!-- Controls -->
+                <div class="card bg-base-200 shadow-xl">
+                    <div class="card-body p-4 flex-row items-center justify-around">
                         <label class="label cursor-pointer gap-2">
                             <span class="label-text text-xs">Lot Size</span>
                             <input type="checkbox" class="toggle toggle-sm toggle-primary lot-size-toggle" />
@@ -81,6 +83,34 @@
                             <span class="label-text text-xs">Pause</span>
                             <input type="checkbox" class="toggle toggle-sm toggle-secondary pause-toggle" />
                         </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market Overview & Sentiment -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body p-4">
+                        <h2 class="card-title text-lg">Market Overview</h2>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="stat bg-base-200 rounded-box p-3">
+                                <div class="stat-title text-xs">Total Bid Qty</div>
+                                <div class="stat-value text-success text-xl total-bid-qty">0</div>
+                            </div>
+                            <div class="stat bg-base-200 rounded-box p-3">
+                                <div class="stat-title text-xs">Total Ask Qty</div>
+                                <div class="stat-value text-error text-xl total-ask-qty">0</div>
+                            </div>
+                        </div>
+                        <div class="text-xs mt-1 text-center opacity-70">Last Updated: <span class="font-mono last-update-time">--</span></div>
+                    </div>
+                </div>
+                <div class="card bg-base-100 shadow-xl">
+                    <div class="card-body p-4">
+                        <h2 class="card-title text-lg">Market Sentiment</h2>
+                        <div class="flex justify-center items-center h-full">
+                             <div class="radial-progress sentiment-gauge" style="--value:50; --size:6rem; --thickness: 0.8rem;">50%</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -116,7 +146,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <h3 class="text-md font-bold mb-2 text-success">Bid Orders (Buy)</h3>
-                            <div class="overflow-x-auto max-h-[600px]">
+                            <div class="overflow-y-auto max-h-[600px] custom-scrollbar">
                                 <table class="table table-sm w-full">
                                     <thead><tr><th>Price</th><th class="text-right">Qty</th><th class="text-center">Orders</th></tr></thead>
                                     <tbody class="bids text-success"></tbody>
@@ -125,7 +155,7 @@
                         </div>
                         <div>
                             <h3 class="text-md font-bold mb-2 text-error">Ask Orders (Sell)</h3>
-                            <div class="overflow-x-auto max-h-[600px]">
+                            <div class="overflow-y-auto max-h-[600px] custom-scrollbar">
                                 <table class="table table-sm w-full">
                                     <thead><tr><th>Price</th><th class="text-right">Qty</th><th class="text-center">Orders</th></tr></thead>
                                     <tbody class="asks text-error"></tbody>
@@ -143,7 +173,7 @@
             const socket = io();
             const instrumentTabs = document.getElementById('instrument-tabs');
             const instrumentTabContent = document.getElementById('instrument-tab-content');
-            const template = document.getElementById('instrument-tab-template');
+            const template = document.getElementById('instrument-template');
             const instrumentStates = {};
 
             const createTab = (instrument, index) => {
@@ -159,15 +189,15 @@
                 const contentClone = template.content.cloneNode(true);
                 const contentDiv = contentClone.querySelector('.tab-content');
                 contentDiv.id = tabId;
-                contentDiv.dataset.symbol = instrument.symbol;
                 if (index === 0) contentDiv.classList.add('active');
-                instrumentTabContent.appendChild(contentClone);
+                instrumentTabContent.appendChild(contentDiv);
 
                 instrumentStates[instrument.symbol] = {
                     lot_size: instrument.lot_size,
                     display_lot_size: false,
                     is_paused: false,
                     maxQuantity: { bid: 1, ask: 1 },
+                    last_price: 0,
                     last_data: null,
                     contentElement: document.getElementById(tabId)
                 };
@@ -202,26 +232,53 @@
                 state.last_data = data;
                 const content = state.contentElement;
 
+                // --- Header ---
                 content.querySelector('.symbol-display').textContent = data.ticker;
+                content.querySelector('.total-bid-qty').textContent = formatQuantity(data.total_bid_qty, symbol);
+                content.querySelector('.total-ask-qty').textContent = formatQuantity(data.total_sell_qty, symbol);
+                content.querySelector('.last-update-time').textContent = new Date(data.timestamp).toLocaleTimeString();
+
                 const bestBid = data.bids.length > 0 ? data.bids[0].price : 0;
                 const bestAsk = data.asks.length > 0 ? data.asks[0].price : 0;
-                content.querySelector('.last-price').textContent = ((bestBid + bestAsk) / 2).toFixed(2);
+                const midPrice = (bestBid + bestAsk) / 2;
+
+                if (midPrice > 0 && state.last_price > 0) {
+                    const change = midPrice - state.last_price;
+                    const changeEl = content.querySelector('.price-change');
+                    changeEl.textContent = change.toFixed(2);
+                    changeEl.className = change >= 0 ? 'stat-desc text-xs text-success' : 'stat-desc text-xs text-error';
+                }
+                if (midPrice > 0) {
+                    state.last_price = midPrice;
+                    content.querySelector('.last-price').textContent = midPrice.toFixed(2);
+                }
                 content.querySelector('.bid-ask-spread').textContent = (bestAsk > bestBid) ? (bestAsk - bestBid).toFixed(2) : "0.00";
 
+                // --- Sentiment ---
+                const totalQty = data.total_bid_qty + data.total_sell_qty;
+                const sentiment = totalQty > 0 ? (data.total_bid_qty - data.total_sell_qty) / totalQty : 0;
+                const gaugeValue = (sentiment + 1) / 2 * 100;
+                const gaugeEl = content.querySelector('.sentiment-gauge');
+                gaugeEl.style.setProperty('--value', gaugeValue);
+                gaugeEl.textContent = `${gaugeValue.toFixed(0)}%`;
+
+
+                // --- Imbalance ---
                 const updateImbalance = (level) => {
                     const imb = data[`imbalance_${level}`];
                     const valEl = content.querySelector(`.imbalance-${level}-value`);
                     const intEl = content.querySelector(`.imbalance-${level}-interpretation`);
                     valEl.textContent = `${imb.imbalance_pct.toFixed(1)}%`;
                     intEl.textContent = imb.interpretation;
-                    if (imb.imbalance_pct > 5) valEl.className = `stat-value text-success text-xl imbalance-${level}-value`;
-                    else if (imb.imbalance_pct < -5) valEl.className = `stat-value text-error text-xl imbalance-${level}-value`;
-                    else valEl.className = `stat-value text-warning text-xl imbalance-${level}-value`;
+                    if (imb.imbalance_pct > 5) valEl.className = `stat-value text-xl imbalance-${level}-value text-success`;
+                    else if (imb.imbalance_pct < -5) valEl.className = `stat-value text-xl imbalance-${level}-value text-error`;
+                    else valEl.className = `stat-value text-xl imbalance-${level}-value text-warning`;
                 };
                 updateImbalance(10);
                 updateImbalance(20);
                 updateImbalance(50);
                 
+                // --- DOM Tables ---
                 state.maxQuantity.bid = Math.max(...data.bids.map(l => l.quantity), 1);
                 state.maxQuantity.ask = Math.max(...data.asks.map(l => l.quantity), 1);
 
@@ -233,7 +290,7 @@
                         const row = document.createElement('tr');
                         const depthPercent = (level.quantity / maxQty * 100);
                         row.innerHTML = `
-                            <td><div class="depth-bar ${side === 'asks' ? 'ask-depth-bar' : ''}" style="width: ${depthPercent}%"></div>${level.price.toFixed(2)}</td>
+                            <td class="relative"><div class="depth-bar ${side === 'asks' ? 'ask-depth-bar' : ''}" style="width: ${depthPercent}%"></div><span class="relative z-10">${level.price.toFixed(2)}</span></td>
                             <td class="text-right">${formatQuantity(level.quantity, symbol)}</td>
                             <td class="text-center">${level.orders}</td>
                         `;
@@ -248,13 +305,12 @@
                 .then(response => response.json())
                 .then(instruments => {
                     instruments.forEach(createTab);
-
                     instrumentTabs.addEventListener('click', (e) => {
                         if (e.target.matches('.tab')) {
                             instrumentTabs.querySelectorAll('.tab').forEach(tab => tab.classList.remove('tab-active'));
                             instrumentTabContent.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
                             e.target.classList.add('tab-active');
-                            instrumentTabContent.querySelector(`.tab-content[data-symbol='${e.target.dataset.symbol}']`).classList.add('active');
+                            instrumentStates[e.target.dataset.symbol].contentElement.classList.add('active');
                         }
                     });
                 });
